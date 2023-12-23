@@ -1,6 +1,7 @@
 .idea
 compressed-video
 raw-video
+log
 
 credentials.json
 token.json
