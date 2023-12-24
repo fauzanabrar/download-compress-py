@@ -2,6 +2,7 @@
 compressed-video
 raw-video
 log
+playlist
 
 credentials.json
 token.json
