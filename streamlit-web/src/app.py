@@ -2,6 +2,7 @@ import streamlit as st
 import os
 # from utils.drive_utils import authenticate_drive, upload_file
 # from utils.compression_utils import compress_video
+from utils.download_utils import download_file
 
 
 def main():
@@ -28,13 +29,17 @@ def main():
     if st.button("Download file"):
         if download_link:
             # Simulate file download
-            index = st.session_state.index
-            file_name = f"downloaded-files/video_{index}.mp4"
-            with open(file_name, "wb") as f:
-                # Simulate writing to file
-                f.write(os.urandom(1024))
-            index += 1
-            st.session_state.index = index
+            # index = st.session_state.index
+            # file_name = f"downloaded-files/video_{index}.mp4"
+            # with open(file_name, "wb") as f:
+            #     # Simulate writing to file
+            #     f.write(os.urandom(1024))
+            # index += 1
+            # st.session_state.index = index
+
+            # download the file
+            file_name = download_file(download_link)
+
             list_all_files = refresh_file_list()
             
             st.success(f"File downloaded from {download_link}!")
