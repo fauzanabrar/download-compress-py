@@ -4,9 +4,11 @@ raw-video
 log
 playlist
 
+downloaded-files
 *credentials.json
 token.json
 service_account.json
+
 
 streamlit-web/downloaded-files
 streamlit-web/unzipfiles

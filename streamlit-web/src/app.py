@@ -1,6 +1,6 @@
 import streamlit as st
 import os
-# from utils.drive_utils import authenticate_drive, upload_file
+from utils.drive_utils import authenticate_drive, upload_file_to_drive
 # from utils.compression_utils import compress_video
 from utils.download_utils import download_file
 
@@ -17,6 +17,11 @@ def main():
     def refresh_file_list():
         st.session_state.list_all_files = os.listdir("downloaded-files")
         return st.session_state.list_all_files
+
+    if "service" not in st.session_state:
+        st.session_state.service = None
+    
+    service = None
 
     st.title("Video Upload to Google Drive")
 
@@ -106,15 +111,49 @@ def main():
         else:
             st.error("No token file uploaded.")
 
+    # Authenticate Google Drive
+    if st.button("Authenticate Google Drive"):
+        if token_file is not None:
+            service = authenticate_drive("temp_credentials.json", "temp_credentials.json", is_service_account=True)
+            if service:
+                st.session_state.service = service
+                st.success("Google Drive authenticated successfully!")
+            else:
+                st.error("Failed to authenticate Google Drive.")
+        else:
+            st.error("Please upload a valid token file.")
+
     # Choose file to upload from the downloaded file folder
+    if st.button("Refresh File List"):
+        list_all_files = refresh_file_list()
+        st.success("File list refreshed!")
+    
     selected_file = st.selectbox("Select a video file to upload:", list_all_files)
-    if selected_file:
-        st.success(f"Selected file: {selected_file}")
-    # Simulate file upload
+    folder_id = st.text_input("Enter the Google Drive folder ID (optional):")
+    if folder_id:
+        folder_id = folder_id.strip()
+    else:
+        folder_id = None
+
     if st.button("Upload File"):
         if selected_file:
-            # Simulate file upload
-            st.success(f"File {selected_file} uploaded to Google Drive!")
+            file_path = f"downloaded-files/{selected_file}"
+            file_name = selected_file
+            
+            # Upload the file to Google Drive
+            if st.session_state.service:
+                service = st.session_state.service
+            else:
+                service = authenticate_drive("temp_credentials.json", "temp_credentials.json", is_service_account=True)
+            
+            if service:
+                file_id = upload_file_to_drive(service, file_path, file_name, folder_id)
+                if file_id:
+                    st.success(f"File {selected_file} uploaded to Google Drive with ID: {file_id}")
+                else:
+                    st.error("Failed to upload the file.")
+            else:
+                st.error("Google Drive service not authenticated. Please authenticate first.")
         else:
             st.error("Please select a file to upload.")
   
