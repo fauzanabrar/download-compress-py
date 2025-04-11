@@ -60,6 +60,38 @@ def get_next_page(service, page_token):
     items = results.get('files', [])
     return items
 
+def get_lists_of_folders(service, folder_id):
+    results = service.files().list(
+        q=f"'{folder_id}' in parents and mimeType='application/vnd.google-apps.folder'",
+        pageSize=10,
+        fields="nextPageToken, files(id, name)"
+    ).execute()
+    items = results.get('files', [])
+    return items
+
+def get_file_metadata(service, file_id):
+    try:
+        file = service.files().get(fileId=file_id, fields='id, name, mimeType').execute()
+        return file
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return None
+    
+def get_file_id(service, file_name, folder_id):
+    try:
+        results = service.files().list(
+            q=f"name='{file_name}' and '{folder_id}' in parents",
+            fields="files(id, name)"
+        ).execute()
+        items = results.get('files', [])
+        if items:
+            return items[0].get('id')
+        else:
+            return None
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return None
+
 def create_folder(service, folder_name, parent_id=None):
     file_metadata = {
         'name': folder_name,
@@ -70,6 +102,14 @@ def create_folder(service, folder_name, parent_id=None):
 
     folder = service.files().create(body=file_metadata, fields='id').execute()
     return folder.get('id')
+
+def delete_folder(service, folder_id):
+    try:
+        service.files().delete(fileId=folder_id).execute()
+        return True
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return False
 
 def delete_file(service, file_id):
     try:
