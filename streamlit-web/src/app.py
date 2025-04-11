@@ -9,18 +9,21 @@ def main():
     if not os.path.exists("downloaded-files"):
         os.makedirs("downloaded-files")
         
-    if "list_all_files" not in st.session_state:
-        st.session_state.list_all_files = os.listdir("downloaded-files")
-    
+    def initialize_state(state_name, default_value=None):
+        if state_name not in st.session_state:
+            st.session_state[state_name] = default_value if default_value is not None else []
+
+    def update_state(state_name, new_value):
+        st.session_state[state_name] = new_value
+        return st.session_state[state_name]
+
+    initialize_state("list_all_files", os.listdir("downloaded-files"))
     list_all_files = st.session_state.list_all_files
 
     def refresh_file_list():
-        st.session_state.list_all_files = os.listdir("downloaded-files")
-        return st.session_state.list_all_files
+        return update_state("list_all_files", os.listdir("downloaded-files"))
 
-    if "service" not in st.session_state:
-        st.session_state.service = None
-    
+    initialize_state("service", None)    
     service = None
 
     st.title("Video Upload to Google Drive")
@@ -28,25 +31,10 @@ def main():
     # Request download link
     download_link = st.text_input("Enter the download link for the video:")
 
-    if "index" not in st.session_state:
-        st.session_state.index = 1
-
     if st.button("Download file"):
         if download_link:
-            # Simulate file download
-            # index = st.session_state.index
-            # file_name = f"downloaded-files/video_{index}.mp4"
-            # with open(file_name, "wb") as f:
-            #     # Simulate writing to file
-            #     f.write(os.urandom(1024))
-            # index += 1
-            # st.session_state.index = index
-
-            # download the file
             file_name = download_file(download_link)
-
             list_all_files = refresh_file_list()
-            
             st.success(f"File downloaded from {download_link}!")
         else:
             st.error("Please enter a valid download link.")
@@ -66,32 +54,34 @@ def main():
     
     # Google drive parts
     st.divider()
-    st.subheader("Upload to Google Drive")
+    st.subheader("Authenticate to Google Drive")
 
     # Upload token or credentials file
-    if "token_file" not in st.session_state:
-        # check if token file is already uploaded
+    initialize_state("token_file_path", "temp_credentials.json")
+    token_file_path = st.session_state.token_file_path
+
+    initialize_state("token_file_content", None)
+
+    def check_token_file_content():
         if os.path.exists("temp_credentials.json"):
             with open("temp_credentials.json", "r") as f:
-                st.session_state.token_file = f.read()
-        else:
-            st.session_state.token_file = None
+                update_state("token_file_content", f.read())
+            
+            return st.session_state.token_file_content
+        
     
-    token_file = st.file_uploader("Upload token.json or credentials.json", type=["json"])
+    token_file_content = check_token_file_content()
+    
+    token_file_input = st.file_uploader("Upload token.json or credentials.json", type=["json"])
 
-    if token_file is not None:
-        st.session_state.token_file = token_file
-
-    token_file = st.session_state.token_file
 
     if st.button("Upload Token File"):
-        if token_file is not None:
+        if token_file_input is not None:
             # Save the uploaded token file temporarily
             with open("temp_credentials.json", "wb") as f:
-                f.write(token_file.getbuffer())
+                f.write(token_file_input.getbuffer())
             
-            with open("temp_credentials.json", "r") as f:
-                st.session_state.token_file = f.read()
+            token_file_content = check_token_file_content()
                 
             st.success("Token file uploaded successfully!")
         else:
@@ -99,29 +89,34 @@ def main():
     
     # Show the content of the uploaded token file
     if st.button("Show/Hide Token File Content"):
-        if "show_token_content" not in st.session_state:
-            st.session_state.show_token_content = False
+        initialize_state("show_token_content", False)
 
-        st.session_state.show_token_content = not st.session_state.show_token_content
+        update_state("show_token_content", not st.session_state.show_token_content)
 
     if st.session_state.get("show_token_content", False):
-        if token_file is not None:
-            token_content = st.session_state.token_file
-            st.text_area("Token File Content", token_content, height=200)
+        if token_file_content is not None:
+            token_file_content = check_token_file_content()
+            st.text_area("Token File Content", token_file_content, height=200)
         else:
             st.error("No token file uploaded.")
 
     # Authenticate Google Drive
     if st.button("Authenticate Google Drive"):
-        if token_file is not None:
-            service = authenticate_drive("temp_credentials.json", "temp_credentials.json", is_service_account=True)
+        token_file_path = st.session_state.token_file_path
+        if token_file_path is not None:
+            service = authenticate_drive(token_file_path, token_file_path, is_service_account=True)
             if service:
-                st.session_state.service = service
+                service = update_state("service", service)
+
                 st.success("Google Drive authenticated successfully!")
             else:
                 st.error("Failed to authenticate Google Drive.")
         else:
             st.error("Please upload a valid token file.")
+
+    # List files in Google Drive
+    st.divider()
+    st.subheader("Upload to Google Drive")
 
     # Choose file to upload from the downloaded file folder
     if st.button("Refresh File List"):
@@ -138,10 +133,15 @@ def main():
         folder_id_input = None
 
     # Get list of folders in Google Drive
-    if st.session_state.service:
-        service = st.session_state.service
-    else:
-        service = authenticate_drive("temp_credentials.json", "temp_credentials.json", is_service_account=True)
+    def check_service():
+        if st.session_state.service:
+            service = st.session_state.service
+        else:
+            service = authenticate_drive("temp_credentials.json", "temp_credentials.json", is_service_account=True)
+        
+        return service
+
+    service = check_service()
 
     if service:
         folders = get_lists_of_folders(service, "10514rVBAqv21ry4gvRK-EP2wAxq3cjU6")
@@ -167,10 +167,7 @@ def main():
             file_name = selected_file
             
             # Upload the file to Google Drive
-            if st.session_state.service:
-                service = st.session_state.service
-            else:
-                service = authenticate_drive("temp_credentials.json", "temp_credentials.json", is_service_account=True)
+            service = check_service()
             
             if service:
                 if folder_id_input:
