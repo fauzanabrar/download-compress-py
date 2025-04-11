@@ -4,6 +4,6 @@ raw-video
 log
 playlist
 
-credentials.json
+*credentials.json
 token.json
 service_account.json
