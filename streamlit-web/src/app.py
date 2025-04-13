@@ -1,6 +1,6 @@
 import streamlit as st
 import os
-from utils.drive_utils import authenticate_drive, upload_file_to_drive, get_lists_of_folders
+from utils.drive_utils import authenticate_drive, upload_file_to_drive, get_lists_of_folders, upload_large_file_to_drive, get_drive_quota
 # from utils.compression_utils import compress_video
 from utils.download_utils import download_file
 
@@ -135,10 +135,48 @@ def upload_google_drive_UI(root_folder_id, download_file_path):
         else:
             st.error("Please select a file to upload.")
 
+    if st.button("Upload Large File"):
+        if selected_file:
+            file_path = f"{download_file_path}/{selected_file}"
+            file_name = selected_file
+            
+            # Upload the file to Google Drive
+            service = st.session_state.service
 
-def main():
-    pass
-  
+            if service:
+                if folder_id_input:
+                    folder_id = folder_id_input.strip()
+                    
+                file_id = upload_large_file_to_drive(service, file_path, file_name, folder_id)
+
+                if file_id:
+                    st.success(f"File {selected_file} uploaded to Google Drive with ID: {file_id}")
+                else:
+                    st.error("Failed to upload the file.")
+            else:
+                st.error("Google Drive service not authenticated. Please authenticate first.")
+        else:
+            st.error("Please select a file to upload.")
+
+    if st.button("Get Google Drive Quota"):
+        service = st.session_state.service
+        if service:
+            quota = get_drive_quota(service)
+            if quota:
+                # format the response to human readable limit, usage, usageInDrive, and usageInDriveTrash
+                limit = f"{int(quota.get('limit')) / (1024 ** 3):.2f} GB"
+                usage = f"{int(quota.get('usage')) / (1024 ** 3):.2f} GB"
+                usage_in_drive = f"{int(quota.get('usageInDrive')) / (1024 ** 3):.2f} GB"
+                usage_in_drive_trash = f"{int(quota.get('usageInDriveTrash')) / (1024 ** 3):.2f} GB"
+
+                st.success(f"Google Drive Quota:\n- Limit: {limit}\n- Usage: {usage}\n- Usage in Drive: {usage_in_drive}\n- Usage in Drive Trash: {usage_in_drive_trash}")
+
+                
+                
+            else:
+                st.error("Failed to retrieve Google Drive quota.")
+        else:
+            st.error("Google Drive service not authenticated. Please authenticate first.")
 
 if __name__ == "__main__":
     # initialize variable
@@ -202,4 +240,5 @@ if __name__ == "__main__":
 
     # upload to google drive
     upload_google_drive_UI(ROOT_FOLDER_ID, DOWNLOAD_FILE_PATH)
+
 

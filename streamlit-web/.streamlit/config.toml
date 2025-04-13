@@ -5,6 +5,9 @@ email = "your_email@example.com"
 headless = true
 port = 8501
 enableCORS = false
+maxUploadSize = 10000 
+maxMessageSize = 18000  # For WebSocket messages
+fileWatcherTimeout = 3000
 
 [theme]
 primaryColor = "#F39C12"

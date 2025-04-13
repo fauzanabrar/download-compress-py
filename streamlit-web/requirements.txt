@@ -5,3 +5,7 @@ google-api-python-client
 yt-dlp
 ffmpeg-python
 pandas
+fastapi
+fastapi[standard]
+uvicorn
+requests

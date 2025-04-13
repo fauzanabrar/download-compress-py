@@ -38,9 +38,37 @@ def upload_file_to_drive(service, file_path, file_name, folder_id):
         'parents': [folder_id]
     }
     media = MediaFileUpload(file_path, mimetype='application/octet-stream')
+    # print(f"Uploading {file_name} to Google Drive...")
+    # response = None
+
+    # while response is None:
+    #     status, response = request.next_chunk()
+    #     print(f"Uploading {file_name} to Google Drive...")
+    #     if status:
+    #         print(f"Uploaded {int(status.progress() * 100)}%")
+
+    # return response.get('id')
+    
     file = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
     return file.get('id')
 
+def upload_large_file_to_drive(service, file_path, file_name, folder_id):
+    from googleapiclient.http import MediaFileUpload
+
+    file_metadata = {
+        'name': file_name,
+        'parents': [folder_id]
+    }
+    media = MediaFileUpload(file_path, mimetype='application/octet-stream', resumable=True)
+    
+    request = service.files().create(body=file_metadata, media_body=media, fields='id')
+    response = None
+    while response is None:
+        status, response = request.next_chunk()
+        if status:
+            print(f"Uploaded {int(status.progress() * 100)}%")
+    
+    return response.get('id')
 
 def get_lists_files(service, folder_id):
     results = service.files().list(
@@ -151,5 +179,6 @@ def download_file_from_drive(service, file_id):
     fh.close()
     return file_path
 
-
-
+def get_drive_quota(service):
+    about = service.about().get(fields="storageQuota").execute()
+    return about['storageQuota']
