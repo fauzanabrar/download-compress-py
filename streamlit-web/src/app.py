@@ -7,6 +7,7 @@ from utils.drive_utils import (
     get_drive_quota,
     delete_all_drive_files,
 )
+from pathlib import Path
 
 # from utils.compression_utils import compress_video
 from utils.download_utils import download_file
@@ -44,6 +45,28 @@ def compress_video_UI(download_file_path):
         else:
             st.error("Please select a file to compress.")
 
+def download_compressed_file_UI():
+    st.divider()
+    st.subheader("Download Compressed File")
+
+    # Choose file to download
+    list_all_files = st.session_state.list_all_files
+    selected_file = st.selectbox("Select a compressed file to download:", list_all_files)
+
+    if selected_file:
+        file_path = f"downloaded-files/{selected_file}"
+        with open(file_path, "rb") as f:
+            data = f.read()
+
+        # Simulate downloading the file
+        st.download_button(
+            label="Download",
+            data=data,
+            file_name=selected_file,
+            mime="application/octet-stream",
+        )
+    else:
+        st.error("Please select a file to download.")
 
 def google_drive_authentication_UI(token_file_path):
     st.divider()
@@ -220,6 +243,132 @@ def upload_google_drive_UI(root_folder_id, download_file_path):
             st.error("Please select a file to upload.")
 
 
+def list_download_from_google_drive_UI(root_folder_id):
+    st.divider()
+    st.subheader("List and Download Files from Google Drive")
+
+    service = st.session_state.service
+    if not service:
+        st.error("Google Drive service not authenticated. Please authenticate first.")
+        return
+
+    # Get list of folders in Google Drive
+    folders = get_lists_of_folders(service, root_folder_id)
+
+    folder_names = [folder["name"] for folder in folders]
+    folder_ids = [folder["id"] for folder in folders]
+
+    selected_folder = st.selectbox("Select a folder to list files:", folder_names)
+
+    if selected_folder:
+        folder_id = folder_ids[folder_names.index(selected_folder)]
+        folder_id = sanitize_input(folder_id)
+
+        # List files in the selected folder
+        query = f"'{folder_id}' in parents and trashed=false"
+        results = service.files().list(q=query, fields="files(id, name)").execute()
+        files = results.get("files", [])
+
+        if files:
+            for file in files:
+                file_name = file["name"]
+                file_id = file["id"]
+
+                # Display file name with a download button
+                st.write(file_name)
+                file_data = service.files().get_media(fileId=file_id).execute()
+                st.download_button(
+                    label="Download",
+                    data=file_data,
+                    file_name=file_name,
+                    mime="application/octet-stream",
+                )
+        else:
+            st.info("No files found in the selected folder.")
+    else:
+        st.error("Please select a folder to list files.")
+
+    ###############################################################
+    # Function to get list of files in a directory
+    # def get_files(directory="."):
+    #     all_files = []
+    #     for item in os.listdir(directory):
+    #         item_path = os.path.join(directory, item)
+    #         if os.path.isfile(item_path):
+    #             all_files.append(item_path)
+    #     return all_files
+
+    # ITEMS_PER_PAGE = 10
+
+    # st.title("File Explorer with Download")
+
+    # # Initialize session state
+    # if 'current_dir' not in st.session_state:
+    #     st.session_state.current_dir = f"/workspaces/download-compress-py/downloaded-files"
+    # if 'current_page' not in st.session_state:
+    #     st.session_state.current_page = 0
+
+    # current_dir = st.session_state.current_dir
+    # parent_dir = str(Path(current_dir).parent)
+
+    # # Get directory contents
+    # items = []
+    # # Add parent directory if not root
+    # if Path(current_dir).parent != Path(current_dir):
+    #     items.append(("📁 ..", parent_dir))
+    
+    # # Add current directory contents
+    # try:
+    #     for item in os.listdir(current_dir):
+    #         item_path = os.path.join(current_dir, item)
+    #         if os.path.isdir(item_path):
+    #             items.append((f"📁 {item}", item_path))
+    #         else:
+    #             items.append((f"📄 {item}", item_path))
+    # except PermissionError:
+    #     st.error("Permission denied to access this directory")
+
+    # # Pagination
+    # total_pages = (len(items) + ITEMS_PER_PAGE - 1) // ITEMS_PER_PAGE
+    # start_idx = st.session_state.current_page * ITEMS_PER_PAGE
+    # end_idx = start_idx + ITEMS_PER_PAGE
+    # current_items = items[start_idx:end_idx]
+
+    # # UI Elements
+    # st.markdown(f"**Current Directory:** `{current_dir}`")
+    
+    # # Pagination controls
+    # col1, col2, col3 = st.columns([1, 1, 4])
+    # with col1:
+    #     if st.button("⬅️ Previous") and st.session_state.current_page > 0:
+    #         st.session_state.current_page -= 1
+    # with col2:
+    #     if st.button("Next ➡️") and st.session_state.current_page < total_pages - 1:
+    #         st.session_state.current_page += 1
+    # with col3:
+    #     st.markdown(f"**Page {st.session_state.current_page + 1} of {total_pages}**")
+
+    # # Display items
+    # for display_name, full_path in current_items:
+    #     cols = st.columns([5, 1])
+    #     cols[0].markdown(display_name)
+        
+    #     if os.path.isdir(full_path):
+    #         if cols[1].button("Open", key=f"open_{full_path}"):
+    #             st.session_state.current_dir = full_path
+    #             st.session_state.current_page = 0
+    #             # st.experimental_rerun()
+    #     else:
+    #         with cols[1]:
+    #             with open(full_path, "rb") as f:
+    #                 st.download_button(
+    #                     label="Download",
+    #                     data=f,
+    #                     file_name=os.path.basename(full_path),
+    #                     key=f"dl_{full_path}"
+    #                 )
+
+
 if __name__ == "__main__":
     # initialize variable
     DOWNLOAD_FILE_PATH = "downloaded-files"
@@ -283,8 +432,14 @@ if __name__ == "__main__":
     # video compress
     compress_video_UI(DOWNLOAD_FILE_PATH)
 
+    # Download compressed file
+    download_compressed_file_UI()
+
     # google drive authentication
     google_drive_authentication_UI(TOKEN_FILE_PATH)
 
     # upload to google drive
     upload_google_drive_UI(ROOT_FOLDER_ID, DOWNLOAD_FILE_PATH)
+
+    # download file from Google Drive
+    list_download_from_google_drive_UI(ROOT_FOLDER_ID)
