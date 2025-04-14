@@ -53,12 +53,9 @@ def download_file(url, output_dir="downloaded-files"):
     return str(output_path)
 
 
-def download_from_local():
+def download_from_local(local_file_path):
     import os
     from pathlib import Path
-
-    # Define the local file path
-    local_file_path = "local-files/sample.txt"  # Change this to your actual file path
 
     # Ensure the file exists
     if not os.path.exists(local_file_path):
@@ -71,9 +68,11 @@ def download_from_local():
     # Define the output file path
     output_file_path = output_dir / Path(local_file_path).name
 
+    print('continue....')
     # Copy the file to the output directory
     with open(local_file_path, "rb") as src_file:
         with open(output_file_path, "wb") as dest_file:
             dest_file.write(src_file.read())
 
+    print('done....')
     return str(output_file_path)
