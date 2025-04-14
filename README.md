@@ -8,6 +8,7 @@ This script use the following libraries:
 - [YouTube-dl](https://ytdl-org.github.io/youtube-dl/)
 - [Google Auth Python Client]()
 - [Google Drive Python Client]()
+- [Streamlit](https://streamlit.io)
 
 ## Features
 - Download video from a given URL
@@ -15,6 +16,7 @@ This script use the following libraries:
 - Upload the compressed video to Google Drive
 - Create a log file to keep track of the download and compression process
 - Download and merge all stream video in format .u3m8
+- Website UI to upload compress then download file on Google Drive
 
 ## Installation
 Get auth credentials for Google Drive API and YouTube API. You can use either OAuth 2.0 or Service Account.
@@ -33,3 +35,18 @@ Then setup and run the main.ipynb notebook to install the required libraries.
 
 #### For download stream
 Need .u3m8 playlist url and run the download_stream.ipynb notebook to download and merge all the stream video.
+
+### Web UI usage
+1. Install all libraries on `requirements.txt`
+```bash
+pip install -r streamlit-web/requirement.txt
+```
+2. Run streamlit web UI on `app.py` file
+```bash
+streamlit run streamlit-web/src/app.py
+```
+3. After the web is served. Donwload your file and compress it.
+4. Then Authenticate your Google Drive service account with upload the `credentials.json` file. 
+5. Click `Authenticate Google Drive` to authenticate your credentials.
+6. After that choose file that you compress to upload it on your google drive or download it directly.
+7. Done
