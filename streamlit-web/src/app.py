@@ -194,8 +194,16 @@ def upload_google_drive_UI(root_folder_id, download_file_path):
                 if folder_id_input:
                     folder_id = folder_id_input.strip()
 
+                progress_bar = st.progress(0)
+                progress_text = st.empty()
+
                 file_id = upload_large_file_to_drive(
-                    service, file_path, file_name, folder_id
+                    service,
+                    file_path,
+                    file_name,
+                    folder_id,
+                    progress_bar,
+                    progress_text,
                 )
 
                 if file_id:
