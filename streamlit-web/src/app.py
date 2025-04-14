@@ -1,6 +1,6 @@
 import streamlit as st
 import os
-from utils.drive_utils import authenticate_drive, upload_file_to_drive, get_lists_of_folders, upload_large_file_to_drive, get_drive_quota
+from utils.drive_utils import authenticate_drive, get_lists_of_folders, upload_large_file_to_drive, get_drive_quota, delete_all_drive_files
 # from utils.compression_utils import compress_video
 from utils.download_utils import download_file
 
@@ -85,7 +85,48 @@ def upload_google_drive_UI(root_folder_id, download_file_path):
     if st.button("Refresh File List"):
         list_all_files = refresh_file_list()
         st.success("File list refreshed!")
+
+    if st.button("Get Google Drive Quota"):
+        service = st.session_state.service
+        print("Getting Google Drive quota...")
+        if service:
+            quota = get_drive_quota(service)
+            if quota:
+                # format the response to human readable limit, usage, usageInDrive, and usageInDriveTrash
+                limit = f"{int(quota.get('limit')) / (1024 ** 3):.2f} GB"
+                usage = f"{int(quota.get('usage')) / (1024 ** 3):.2f} GB"
+                usage_in_drive = f"{int(quota.get('usageInDrive')) / (1024 ** 3):.2f} GB"
+                usage_in_drive_trash = f"{int(quota.get('usageInDriveTrash')) / (1024 ** 3):.2f} GB"
+
+                st.success(f"Google Drive Quota:\n- Limit: {limit}\n- Usage: {usage}\n- Usage in Drive: {usage_in_drive}\n- Usage in Drive Trash: {usage_in_drive_trash}")
+
+                if int(quota.get('usageInDriveTrash')) > 0 or int(quota.get('usageInDrive')) > 0:
+                    st.session_state.show_delete_all_files_button = True
+
+            else:
+                st.error("Failed to retrieve Google Drive quota.")
+        else:
+            st.error("Google Drive service not authenticated. Please authenticate first.")
     
+    if st.session_state.get("show_delete_all_files_button"):
+        delete_all_files_button = st.button("Delete All Files", key="delete_all_files_button")
+       
+        if delete_all_files_button:
+            print("Deleting all files in Google Drive...")
+            with st.spinner("Deleting files..."):
+                service = st.session_state.service
+                deleted_count, error = delete_all_drive_files(service, dry_run=False)
+
+                if deleted_count > 0:
+                    st.toast(f"Deleted {deleted_count} files from Google Drive.")
+                else:
+                    st.error(f"Failed to delete files from Google Drive. Errors: {error}")
+            
+            # Hide the button after it is clicked
+            update_state("show_delete_all_files_button", False)
+            
+
+
     list_all_files = st.session_state.list_all_files
     selected_file = st.selectbox("Select a video file to upload:", list_all_files)
     
@@ -111,31 +152,7 @@ def upload_google_drive_UI(root_folder_id, download_file_path):
     else:
         st.error("Google Drive service not authenticated. Please authenticate first.")
 
-
     if st.button("Upload File"):
-        if selected_file:
-            file_path = f"{download_file_path}/{selected_file}"
-            file_name = selected_file
-            
-            # Upload the file to Google Drive
-            service = st.session_state.service
-
-            if service:
-                if folder_id_input:
-                    folder_id = folder_id_input.strip()
-                    
-                file_id = upload_file_to_drive(service, file_path, file_name, folder_id)
-
-                if file_id:
-                    st.success(f"File {selected_file} uploaded to Google Drive with ID: {file_id}")
-                else:
-                    st.error("Failed to upload the file.")
-            else:
-                st.error("Google Drive service not authenticated. Please authenticate first.")
-        else:
-            st.error("Please select a file to upload.")
-
-    if st.button("Upload Large File"):
         if selected_file:
             file_path = f"{download_file_path}/{selected_file}"
             file_name = selected_file
@@ -158,25 +175,10 @@ def upload_google_drive_UI(root_folder_id, download_file_path):
         else:
             st.error("Please select a file to upload.")
 
-    if st.button("Get Google Drive Quota"):
-        service = st.session_state.service
-        if service:
-            quota = get_drive_quota(service)
-            if quota:
-                # format the response to human readable limit, usage, usageInDrive, and usageInDriveTrash
-                limit = f"{int(quota.get('limit')) / (1024 ** 3):.2f} GB"
-                usage = f"{int(quota.get('usage')) / (1024 ** 3):.2f} GB"
-                usage_in_drive = f"{int(quota.get('usageInDrive')) / (1024 ** 3):.2f} GB"
-                usage_in_drive_trash = f"{int(quota.get('usageInDriveTrash')) / (1024 ** 3):.2f} GB"
+    
 
-                st.success(f"Google Drive Quota:\n- Limit: {limit}\n- Usage: {usage}\n- Usage in Drive: {usage_in_drive}\n- Usage in Drive Trash: {usage_in_drive_trash}")
+    
 
-                
-                
-            else:
-                st.error("Failed to retrieve Google Drive quota.")
-        else:
-            st.error("Google Drive service not authenticated. Please authenticate first.")
 
 if __name__ == "__main__":
     # initialize variable
@@ -201,6 +203,7 @@ if __name__ == "__main__":
     initialize_state("token_file_path", TOKEN_FILE_PATH)
     initialize_state("token_file_content", None)
     initialize_state("show_token_content", False)
+    initialize_state("show_delete_all_files_button", False)
 
     list_all_files = st.session_state.list_all_files
     service = st.session_state.service

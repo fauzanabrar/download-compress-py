@@ -182,3 +182,52 @@ def download_file_from_drive(service, file_id):
 def get_drive_quota(service):
     about = service.about().get(fields="storageQuota").execute()
     return about['storageQuota']
+
+def delete_all_drive_files(service, dry_run=False):
+    """Permanently delete all files in Google Drive"""
+    from googleapiclient.errors import HttpError
+
+    page_token = None
+    deleted_count = 0
+    errors = []
+    try:
+        while True:
+            # Get all files including trashed ones
+            results = service.files().list(
+                q="trashed = true or trashed = false",
+                spaces='drive',
+                fields="nextPageToken, files(id, name)",
+                pageToken=page_token,
+                includeItemsFromAllDrives=True,
+                supportsAllDrives=True
+            ).execute()
+
+            for file in results.get('files', []):
+                if dry_run:
+                    print(f"[DRY RUN] Would delete: {file['name']} ({file['id']})")
+                    continue
+
+                try:
+                    service.files().delete(
+                        fileId=file['id'],
+                        supportsAllDrives=True
+                    ).execute()
+                    print(f"Deleted: {file['name']}")
+                    deleted_count += 1
+                except HttpError as e:
+                    errors.append(f"Failed to delete {file['id']}: {str(e)}")
+
+            page_token = results.get('nextPageToken')
+            if not page_token:
+                break
+
+        # Empty trash (optional)
+        if not dry_run:
+            service.files().emptyTrash().execute()
+            print("Trash emptied")
+
+    except HttpError as error:
+        print(f"Google API error: {error}")
+
+    return deleted_count, errors
+

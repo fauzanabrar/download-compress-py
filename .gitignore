@@ -5,6 +5,7 @@ log
 playlist
 
 downloaded-files
+unzip
 *credentials.json
 token.json
 service_account.json
