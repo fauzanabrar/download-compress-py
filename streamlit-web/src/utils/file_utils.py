@@ -65,6 +65,7 @@ def download_file(
 
     return str(output_path)
 
+
 def delete_file(file_path):
     import os
 

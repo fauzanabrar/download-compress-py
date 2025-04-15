@@ -18,7 +18,6 @@ def download_video_UI():
 
     # Request download link
     download_link = st.text_input("Enter the download link for the video:")
-
     if st.button("Download file"):
         if download_link:
 
@@ -35,59 +34,36 @@ def compress_video_UI(download_file_path):
     # Compress selected file
     list_all_files = st.session_state.list_all_files
     selected_file = st.selectbox("Select a file to compress:", list_all_files)
-    if st.button("Compress Video"):
-        if selected_file:
-            file_name = f"{os.path.splitext(selected_file)[0]}_compressed{os.path.splitext(selected_file)[1]}"
-            file_path = f"{download_file_path}/{file_name}"
-            with open(file_path, "wb") as f:
-                # Simulate writing to file
-                f.write(os.urandom(1024))
 
-            refresh_file_list()
-            st.success(f"File {file_name} compressed successfully!")
-        else:
-            st.error("Please select a file to compress.")
+    file_path = f"{download_file_path}/{selected_file}"
 
+    col1, col2, col3 = st.columns([0.35, 1, 0.25])
 
-def download_compressed_file_UI():
-    st.divider()
-    st.subheader("Download Compressed File")
+    with col1:
+        st.button("Compress Video", on_click=compress_video, args=(selected_file,))
 
-    # Choose file to download
-    list_all_files = st.session_state.list_all_files
-    selected_file = st.selectbox(
-        "Select a compressed file to download:", list_all_files
-    )
+    with col2:
+        if st.button("Prepare Download"):
+            with open(file_path, "rb") as f:
+                data = f.read()
 
-    if selected_file:
-        file_path = f"downloaded-files/{selected_file}"
+            st.download_button(
+                label="Download",
+                data=data,
+                file_name=selected_file,
+                mime="application/octet-stream",
+            )
+    with col3:
+        st.button(
+            "Delete File",
+            on_click=deleted,
+            args=(file_path, selected_file),
+            key="delete_file",
+        )
 
-        col1, col2 = st.columns([0.7, 0.25])
-
-        # Simulate downloading the file
-        with col1:
-            if st.button("Prepare Download"):
-                with open(file_path, "rb") as f:
-                    data = f.read()
-
-                st.download_button(
-                    label="Download",
-                    data=data,
-                    file_name=selected_file,
-                    mime="application/octet-stream",
-                )
-        
-        # Delete file
-        with col2:
-            if st.button("Delete File"):
-                delete_file(file_path)
-                
-                list_all_files = refresh_file_list()
-                list_all_files = st.session_state.list_all_files
-                st.success(f"File {selected_file} deleted successfully!")
-            
-    else:
-        st.error("Please select a file to download.")
+    if st.session_state.get("file_alert", False):
+        st.success(st.session_state.get("alert_message"))
+        update_state("file_alert", False)
 
 
 def google_drive_authentication_UI(token_file_path):
@@ -195,7 +171,9 @@ def upload_google_drive_UI(root_folder_id, download_file_path):
             if delete_all_files_button:
                 with st.spinner("Deleting files..."):
                     service = st.session_state.service
-                    deleted_count, error = delete_all_drive_files(service, dry_run=False)
+                    deleted_count, error = delete_all_drive_files(
+                        service, dry_run=False
+                    )
 
                     if deleted_count > 0:
                         st.toast(f"Deleted {deleted_count} files from Google Drive.")
@@ -257,8 +235,10 @@ def upload_google_drive_UI(root_folder_id, download_file_path):
                 )
 
                 if file_id:
+                    file_link = f"https://drive.google.com/file/d/{file_id}/view"
                     st.success(
-                        f"File {selected_file} uploaded to Google Drive with ID: {file_id}"
+                        f"File {selected_file} uploaded to Google Drive with ID: {file_id}.\n\n"
+                        f"[View File]({file_link})"
                     )
                 else:
                     st.error("Failed to upload the file.")
@@ -306,6 +286,8 @@ if __name__ == "__main__":
     initialize_state("token_file_content", None)
     initialize_state("show_token_content", False)
     initialize_state("show_delete_all_files_button", False)
+    initialize_state("file_alert", False)
+    initialize_state("alert_message", None)
 
     list_all_files = st.session_state.list_all_files
     service = st.session_state.service
@@ -336,15 +318,33 @@ if __name__ == "__main__":
 
         return service
 
+    # Compress video
+    def compress_video(selected_file):
+        file_name = f"{os.path.splitext(selected_file)[0]}_compressed{os.path.splitext(selected_file)[1]}"
+        file_path = os.path.join(DOWNLOAD_FILE_PATH, file_name)
+
+        with open(file_path, "wb") as f:
+            # Simulate writing to file
+            f.write(os.urandom(1024))
+
+        refresh_file_list()
+
+        update_state("file_alert", True)
+        update_state("alert_message", f"File {selected_file} compressed successfully!")
+
+    # Delete file
+    def deleted(file_path, selected_file):
+        delete_file(file_path)
+        refresh_file_list()
+        update_state("file_alert", True)
+        update_state("alert_message", f"File {selected_file} deleted successfully!")
+
     # UI
     # video download
     download_video_UI()
 
     # video compress
     compress_video_UI(DOWNLOAD_FILE_PATH)
-
-    # Download compressed file
-    download_compressed_file_UI()
 
     # google drive authentication
     google_drive_authentication_UI(TOKEN_FILE_PATH)
