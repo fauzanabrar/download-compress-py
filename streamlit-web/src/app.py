@@ -10,7 +10,7 @@ from utils.drive_utils import (
 from pathlib import Path
 
 # from utils.compression_utils import compress_video
-from utils.download_utils import download_file
+from utils.file_utils import download_file, delete_file
 
 
 def download_video_UI():
@@ -18,10 +18,12 @@ def download_video_UI():
 
     # Request download link
     download_link = st.text_input("Enter the download link for the video:")
-
     if st.button("Download file"):
         if download_link:
-            download_file(download_link)
+
+            progress_bar = st.progress(0)
+
+            download_file(download_link, progress_bar=progress_bar)
             refresh_file_list()
             st.success(f"File downloaded from {download_link}!")
         else:
@@ -32,41 +34,37 @@ def compress_video_UI(download_file_path):
     # Compress selected file
     list_all_files = st.session_state.list_all_files
     selected_file = st.selectbox("Select a file to compress:", list_all_files)
-    if st.button("Compress Video"):
-        if selected_file:
-            file_name = f"{os.path.splitext(selected_file)[0]}_compressed{os.path.splitext(selected_file)[1]}"
-            file_path = f"{download_file_path}/{file_name}"
-            with open(file_path, "wb") as f:
-                # Simulate writing to file
-                f.write(os.urandom(1024))
 
-            refresh_file_list()
-            st.success(f"File {file_name} compressed successfully!")
-        else:
-            st.error("Please select a file to compress.")
+    file_path = f"{download_file_path}/{selected_file}"
 
-def download_compressed_file_UI():
-    st.divider()
-    st.subheader("Download Compressed File")
+    col1, col2, col3 = st.columns([0.35, 1, 0.25])
 
-    # Choose file to download
-    list_all_files = st.session_state.list_all_files
-    selected_file = st.selectbox("Select a compressed file to download:", list_all_files)
+    with col1:
+        st.button("Compress Video", on_click=compress_video, args=(selected_file,))
 
-    if selected_file:
-        file_path = f"downloaded-files/{selected_file}"
-        with open(file_path, "rb") as f:
-            data = f.read()
+    with col2:
+        if st.button("Prepare Download"):
+            with open(file_path, "rb") as f:
+                data = f.read()
 
-        # Simulate downloading the file
-        st.download_button(
-            label="Download",
-            data=data,
-            file_name=selected_file,
-            mime="application/octet-stream",
+            st.download_button(
+                label="Download",
+                data=data,
+                file_name=selected_file,
+                mime="application/octet-stream",
+            )
+    with col3:
+        st.button(
+            "Delete File",
+            on_click=deleted,
+            args=(file_path, selected_file),
+            key="delete_file",
         )
-    else:
-        st.error("Please select a file to download.")
+
+    if st.session_state.get("file_alert", False):
+        st.success(st.session_state.get("alert_message"))
+        update_state("file_alert", False)
+
 
 def google_drive_authentication_UI(token_file_path):
     st.divider()
@@ -75,21 +73,26 @@ def google_drive_authentication_UI(token_file_path):
     token_file_input = st.file_uploader(
         "Upload token.json or credentials.json", type=["json"]
     )
-    if st.button("Upload Token File"):
-        if token_file_input is not None:
-            # Save the uploaded token file temporarily
-            with open(token_file_path, "wb") as f:
-                f.write(token_file_input.getbuffer())
 
-            token_file_content = check_token_file_content()
+    col1, col2 = st.columns([0.7, 0.25])
 
-            st.success("Token file uploaded successfully!")
-        else:
-            st.error("Please upload a valid token file.")
+    with col1:
+        if st.button("Upload Token File"):
+            if token_file_input is not None:
+                # Save the uploaded token file temporarily
+                with open(token_file_path, "wb") as f:
+                    f.write(token_file_input.getbuffer())
+
+                token_file_content = check_token_file_content()
+
+                st.success("Token file uploaded successfully!")
+            else:
+                st.error("Please upload a valid token file.")
 
     # Show the content of the uploaded token file
-    if st.button("Show/Hide Token File Content"):
-        update_state("show_token_content", not st.session_state.show_token_content)
+    with col2:
+        if st.button("Show/Hide Token File"):
+            update_state("show_token_content", not st.session_state.show_token_content)
 
     if st.session_state.get("show_token_content", False):
         token_file_content = check_token_file_content()
@@ -119,64 +122,68 @@ def upload_google_drive_UI(root_folder_id, download_file_path):
     st.divider()
     st.subheader("Upload to Google Drive")
 
+    col1, col2 = st.columns([0.25, 1])
+
     # Choose file to upload from the downloaded file folder
-    if st.button("Refresh File List"):
-        list_all_files = refresh_file_list()
-        st.success("File list refreshed!")
+    with col1:
+        if st.button("Refresh File List"):
+            list_all_files = refresh_file_list()
+            st.success("File list refreshed!")
 
-    if st.button("Get Google Drive Quota"):
-        service = st.session_state.service
-        print("Getting Google Drive quota...")
-        if service:
-            quota = get_drive_quota(service)
-            if quota:
-                # format the response to human readable limit, usage, usageInDrive, and usageInDriveTrash
-                limit = f"{int(quota.get('limit')) / (1024 ** 3):.2f} GB"
-                usage = f"{int(quota.get('usage')) / (1024 ** 3):.2f} GB"
-                usage_in_drive = (
-                    f"{int(quota.get('usageInDrive')) / (1024 ** 3):.2f} GB"
-                )
-                usage_in_drive_trash = (
-                    f"{int(quota.get('usageInDriveTrash')) / (1024 ** 3):.2f} GB"
-                )
-
-                st.success(
-                    f"Google Drive Quota:\n- Limit: {limit}\n- Usage: {usage}\n- Usage in Drive: {usage_in_drive}\n- Usage in Drive Trash: {usage_in_drive_trash}"
-                )
-
-                if (
-                    int(quota.get("usageInDriveTrash")) > 0
-                    or int(quota.get("usageInDrive")) > 0
-                ):
-                    st.session_state.show_delete_all_files_button = True
-
-            else:
-                st.error("Failed to retrieve Google Drive quota.")
-        else:
-            st.error(
-                "Google Drive service not authenticated. Please authenticate first."
-            )
-
-    if st.session_state.get("show_delete_all_files_button"):
-        delete_all_files_button = st.button(
-            "Delete All Files", key="delete_all_files_button"
-        )
-
-        if delete_all_files_button:
-            print("Deleting all files in Google Drive...")
-            with st.spinner("Deleting files..."):
-                service = st.session_state.service
-                deleted_count, error = delete_all_drive_files(service, dry_run=False)
-
-                if deleted_count > 0:
-                    st.toast(f"Deleted {deleted_count} files from Google Drive.")
-                else:
-                    st.error(
-                        f"Failed to delete files from Google Drive. Errors: {error}"
+    with col2:
+        if st.button("Get Google Drive Quota"):
+            service = st.session_state.service
+            if service:
+                quota = get_drive_quota(service)
+                if quota:
+                    # format the response to human readable limit, usage, usageInDrive, and usageInDriveTrash
+                    limit = f"{int(quota.get('limit')) / (1024 ** 3):.2f} GB"
+                    usage = f"{int(quota.get('usage')) / (1024 ** 3):.2f} GB"
+                    usage_in_drive = (
+                        f"{int(quota.get('usageInDrive')) / (1024 ** 3):.2f} GB"
+                    )
+                    usage_in_drive_trash = (
+                        f"{int(quota.get('usageInDriveTrash')) / (1024 ** 3):.2f} GB"
                     )
 
-            # Hide the button after it is clicked
-            update_state("show_delete_all_files_button", False)
+                    st.success(
+                        f"Google Drive Quota:\n- Limit: {limit}\n- Usage: {usage}\n- Usage in Drive: {usage_in_drive}\n- Usage in Drive Trash: {usage_in_drive_trash}"
+                    )
+
+                    if (
+                        int(quota.get("usageInDriveTrash")) > 0
+                        or int(quota.get("usageInDrive")) > 0
+                    ):
+                        st.session_state.show_delete_all_files_button = True
+
+                else:
+                    st.error("Failed to retrieve Google Drive quota.")
+            else:
+                st.error(
+                    "Google Drive service not authenticated. Please authenticate first."
+                )
+
+        if st.session_state.get("show_delete_all_files_button"):
+            delete_all_files_button = st.button(
+                "Delete All Files", key="delete_all_files_button"
+            )
+
+            if delete_all_files_button:
+                with st.spinner("Deleting files..."):
+                    service = st.session_state.service
+                    deleted_count, error = delete_all_drive_files(
+                        service, dry_run=False
+                    )
+
+                    if deleted_count > 0:
+                        st.toast(f"Deleted {deleted_count} files from Google Drive.")
+                    else:
+                        st.error(
+                            f"Failed to delete files from Google Drive. Errors: {error}"
+                        )
+
+                # Hide the button after it is clicked
+                update_state("show_delete_all_files_button", False)
 
     list_all_files = st.session_state.list_all_files
     selected_file = st.selectbox("Select a video file to upload:", list_all_files)
@@ -218,7 +225,6 @@ def upload_google_drive_UI(root_folder_id, download_file_path):
                     folder_id = folder_id_input.strip()
 
                 progress_bar = st.progress(0)
-                progress_text = st.empty()
 
                 file_id = upload_large_file_to_drive(
                     service,
@@ -226,12 +232,13 @@ def upload_google_drive_UI(root_folder_id, download_file_path):
                     file_name,
                     folder_id,
                     progress_bar,
-                    progress_text,
                 )
 
                 if file_id:
+                    file_link = f"https://drive.google.com/file/d/{file_id}/view"
                     st.success(
-                        f"File {selected_file} uploaded to Google Drive with ID: {file_id}"
+                        f"File {selected_file} uploaded to Google Drive with ID: {file_id}.\n\n"
+                        f"[View File]({file_link})"
                     )
                 else:
                     st.error("Failed to upload the file.")
@@ -279,6 +286,8 @@ if __name__ == "__main__":
     initialize_state("token_file_content", None)
     initialize_state("show_token_content", False)
     initialize_state("show_delete_all_files_button", False)
+    initialize_state("file_alert", False)
+    initialize_state("alert_message", None)
 
     list_all_files = st.session_state.list_all_files
     service = st.session_state.service
@@ -309,15 +318,33 @@ if __name__ == "__main__":
 
         return service
 
+    # Compress video
+    def compress_video(selected_file):
+        file_name = f"{os.path.splitext(selected_file)[0]}_compressed{os.path.splitext(selected_file)[1]}"
+        file_path = os.path.join(DOWNLOAD_FILE_PATH, file_name)
+
+        with open(file_path, "wb") as f:
+            # Simulate writing to file
+            f.write(os.urandom(1024))
+
+        refresh_file_list()
+
+        update_state("file_alert", True)
+        update_state("alert_message", f"File {selected_file} compressed successfully!")
+
+    # Delete file
+    def deleted(file_path, selected_file):
+        delete_file(file_path)
+        refresh_file_list()
+        update_state("file_alert", True)
+        update_state("alert_message", f"File {selected_file} deleted successfully!")
+
     # UI
     # video download
     download_video_UI()
 
     # video compress
     compress_video_UI(DOWNLOAD_FILE_PATH)
-
-    # Download compressed file
-    download_compressed_file_UI()
 
     # google drive authentication
     google_drive_authentication_UI(TOKEN_FILE_PATH)

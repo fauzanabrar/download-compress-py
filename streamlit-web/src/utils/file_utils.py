@@ -31,7 +31,9 @@ def new_download(url):
 
 
 # For downloading non-video files like a zip file, use the `requests` library.
-def download_file(url, output_dir="downloaded-files"):
+def download_file(
+    url, output_dir="downloaded-files", progress_bar=None, progress_text=None
+):
     import requests
     from pathlib import Path
 
@@ -46,33 +48,30 @@ def download_file(url, output_dir="downloaded-files"):
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Write the file to the output directory
+    progress_value = 0
+    len_response = len(response.content)
     with open(output_path, "wb") as file:
         for chunk in response.iter_content(chunk_size=8192):
+            progress_value += len(chunk) / len_response
+            if progress_bar:
+                progress_bar.progress(
+                    progress_value,
+                    text=f"Downloading {file_name}...  {progress_value:.2%}",
+                )
             file.write(chunk)
+
+    if progress_bar:
+        progress_bar.progress(1.0, text=f"Download complete: {file_name}")
 
     return str(output_path)
 
 
-def download_from_local(local_file_path):
+def delete_file(file_path):
     import os
-    from pathlib import Path
 
-    # Ensure the file exists
-    if not os.path.exists(local_file_path):
-        raise FileNotFoundError(f"The file {local_file_path} does not exist.")
-
-    # Define the output directory and ensure it exists
-    output_dir = Path("downloaded-files")
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    # Define the output file path
-    output_file_path = output_dir / Path(local_file_path).name
-
-    print('continue....')
-    # Copy the file to the output directory
-    with open(local_file_path, "rb") as src_file:
-        with open(output_file_path, "wb") as dest_file:
-            dest_file.write(src_file.read())
-
-    print('done....')
-    return str(output_file_path)
+    try:
+        os.remove(file_path)
+        return True
+    except Exception as e:
+        print(f"Error deleting file: {e}")
+        return False
