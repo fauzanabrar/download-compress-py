@@ -82,21 +82,26 @@ def google_drive_authentication_UI(token_file_path):
     token_file_input = st.file_uploader(
         "Upload token.json or credentials.json", type=["json"]
     )
-    if st.button("Upload Token File"):
-        if token_file_input is not None:
-            # Save the uploaded token file temporarily
-            with open(token_file_path, "wb") as f:
-                f.write(token_file_input.getbuffer())
 
-            token_file_content = check_token_file_content()
+    col1, col2 = st.columns([0.7, 0.25])
 
-            st.success("Token file uploaded successfully!")
-        else:
-            st.error("Please upload a valid token file.")
+    with col1:
+        if st.button("Upload Token File"):
+            if token_file_input is not None:
+                # Save the uploaded token file temporarily
+                with open(token_file_path, "wb") as f:
+                    f.write(token_file_input.getbuffer())
+
+                token_file_content = check_token_file_content()
+
+                st.success("Token file uploaded successfully!")
+            else:
+                st.error("Please upload a valid token file.")
 
     # Show the content of the uploaded token file
-    if st.button("Show/Hide Token File Content"):
-        update_state("show_token_content", not st.session_state.show_token_content)
+    with col2:
+        if st.button("Show/Hide Token File"):
+            update_state("show_token_content", not st.session_state.show_token_content)
 
     if st.session_state.get("show_token_content", False):
         token_file_content = check_token_file_content()
@@ -126,43 +131,47 @@ def upload_google_drive_UI(root_folder_id, download_file_path):
     st.divider()
     st.subheader("Upload to Google Drive")
 
+    col1, col2 = st.columns([0.25, 1])
+
     # Choose file to upload from the downloaded file folder
-    if st.button("Refresh File List"):
-        list_all_files = refresh_file_list()
-        st.success("File list refreshed!")
+    with col1:
+        if st.button("Refresh File List"):
+            list_all_files = refresh_file_list()
+            st.success("File list refreshed!")
 
-    if st.button("Get Google Drive Quota"):
-        service = st.session_state.service
-        print("Getting Google Drive quota...")
-        if service:
-            quota = get_drive_quota(service)
-            if quota:
-                # format the response to human readable limit, usage, usageInDrive, and usageInDriveTrash
-                limit = f"{int(quota.get('limit')) / (1024 ** 3):.2f} GB"
-                usage = f"{int(quota.get('usage')) / (1024 ** 3):.2f} GB"
-                usage_in_drive = (
-                    f"{int(quota.get('usageInDrive')) / (1024 ** 3):.2f} GB"
-                )
-                usage_in_drive_trash = (
-                    f"{int(quota.get('usageInDriveTrash')) / (1024 ** 3):.2f} GB"
-                )
+    with col2:
+        if st.button("Get Google Drive Quota"):
+            service = st.session_state.service
+            print("Getting Google Drive quota...")
+            if service:
+                quota = get_drive_quota(service)
+                if quota:
+                    # format the response to human readable limit, usage, usageInDrive, and usageInDriveTrash
+                    limit = f"{int(quota.get('limit')) / (1024 ** 3):.2f} GB"
+                    usage = f"{int(quota.get('usage')) / (1024 ** 3):.2f} GB"
+                    usage_in_drive = (
+                        f"{int(quota.get('usageInDrive')) / (1024 ** 3):.2f} GB"
+                    )
+                    usage_in_drive_trash = (
+                        f"{int(quota.get('usageInDriveTrash')) / (1024 ** 3):.2f} GB"
+                    )
 
-                st.success(
-                    f"Google Drive Quota:\n- Limit: {limit}\n- Usage: {usage}\n- Usage in Drive: {usage_in_drive}\n- Usage in Drive Trash: {usage_in_drive_trash}"
-                )
+                    st.success(
+                        f"Google Drive Quota:\n- Limit: {limit}\n- Usage: {usage}\n- Usage in Drive: {usage_in_drive}\n- Usage in Drive Trash: {usage_in_drive_trash}"
+                    )
 
-                if (
-                    int(quota.get("usageInDriveTrash")) > 0
-                    or int(quota.get("usageInDrive")) > 0
-                ):
-                    st.session_state.show_delete_all_files_button = True
+                    if (
+                        int(quota.get("usageInDriveTrash")) > 0
+                        or int(quota.get("usageInDrive")) > 0
+                    ):
+                        st.session_state.show_delete_all_files_button = True
 
+                else:
+                    st.error("Failed to retrieve Google Drive quota.")
             else:
-                st.error("Failed to retrieve Google Drive quota.")
-        else:
-            st.error(
-                "Google Drive service not authenticated. Please authenticate first."
-            )
+                st.error(
+                    "Google Drive service not authenticated. Please authenticate first."
+                )
 
     if st.session_state.get("show_delete_all_files_button"):
         delete_all_files_button = st.button(
