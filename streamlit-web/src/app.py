@@ -10,7 +10,7 @@ from utils.drive_utils import (
 from pathlib import Path
 
 # from utils.compression_utils import compress_video
-from utils.file_utils import download_file
+from utils.file_utils import download_file, delete_file
 
 
 def download_video_UI():
@@ -61,16 +61,31 @@ def download_compressed_file_UI():
 
     if selected_file:
         file_path = f"downloaded-files/{selected_file}"
-        with open(file_path, "rb") as f:
-            data = f.read()
+
+        col1, col2 = st.columns([0.7, 0.25])
 
         # Simulate downloading the file
-        st.download_button(
-            label="Download",
-            data=data,
-            file_name=selected_file,
-            mime="application/octet-stream",
-        )
+        with col1:
+            if st.button("Prepare Download"):
+                with open(file_path, "rb") as f:
+                    data = f.read()
+
+                st.download_button(
+                    label="Download",
+                    data=data,
+                    file_name=selected_file,
+                    mime="application/octet-stream",
+                )
+        
+        # Delete file
+        with col2:
+            if st.button("Delete File"):
+                delete_file(file_path)
+                
+                list_all_files = refresh_file_list()
+                list_all_files = st.session_state.list_all_files
+                st.success(f"File {selected_file} deleted successfully!")
+            
     else:
         st.error("Please select a file to download.")
 
