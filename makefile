@@ -7,3 +7,5 @@ web:
 backend:
 	fastapi run backend.py
 
+file:
+	wget https://static.videezy.com/system/protected/files/000/012/427/statue.mp4 -O downloaded-files/statue.mp4
