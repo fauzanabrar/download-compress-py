@@ -10,7 +10,7 @@ from utils.drive_utils import (
 from pathlib import Path
 
 # from utils.compression_utils import compress_video
-from utils.download_utils import download_file
+from utils.file_utils import download_file
 
 
 def download_video_UI():
@@ -142,7 +142,6 @@ def upload_google_drive_UI(root_folder_id, download_file_path):
     with col2:
         if st.button("Get Google Drive Quota"):
             service = st.session_state.service
-            print("Getting Google Drive quota...")
             if service:
                 quota = get_drive_quota(service)
                 if quota:
@@ -173,26 +172,25 @@ def upload_google_drive_UI(root_folder_id, download_file_path):
                     "Google Drive service not authenticated. Please authenticate first."
                 )
 
-    if st.session_state.get("show_delete_all_files_button"):
-        delete_all_files_button = st.button(
-            "Delete All Files", key="delete_all_files_button"
-        )
+        if st.session_state.get("show_delete_all_files_button"):
+            delete_all_files_button = st.button(
+                "Delete All Files", key="delete_all_files_button"
+            )
 
-        if delete_all_files_button:
-            print("Deleting all files in Google Drive...")
-            with st.spinner("Deleting files..."):
-                service = st.session_state.service
-                deleted_count, error = delete_all_drive_files(service, dry_run=False)
+            if delete_all_files_button:
+                with st.spinner("Deleting files..."):
+                    service = st.session_state.service
+                    deleted_count, error = delete_all_drive_files(service, dry_run=False)
 
-                if deleted_count > 0:
-                    st.toast(f"Deleted {deleted_count} files from Google Drive.")
-                else:
-                    st.error(
-                        f"Failed to delete files from Google Drive. Errors: {error}"
-                    )
+                    if deleted_count > 0:
+                        st.toast(f"Deleted {deleted_count} files from Google Drive.")
+                    else:
+                        st.error(
+                            f"Failed to delete files from Google Drive. Errors: {error}"
+                        )
 
-            # Hide the button after it is clicked
-            update_state("show_delete_all_files_button", False)
+                # Hide the button after it is clicked
+                update_state("show_delete_all_files_button", False)
 
     list_all_files = st.session_state.list_all_files
     selected_file = st.selectbox("Select a video file to upload:", list_all_files)

@@ -76,7 +76,6 @@ def upload_large_file_to_drive(
         status, response = request.next_chunk()
         if status:
             progress = status.progress()
-            print("running")
             if progress_bar:
                 progress_bar.progress(
                     progress, text=f"Upload Progress: {int(progress * 100)}%"
@@ -255,14 +254,14 @@ def delete_all_drive_files(service, dry_run=False):
 
             for file in results.get("files", []):
                 if dry_run:
-                    print(f"[DRY RUN] Would delete: {file['name']} ({file['id']})")
+                    # print(f"[DRY RUN] Would delete: {file['name']} ({file['id']})")
                     continue
 
                 try:
                     service.files().delete(
                         fileId=file["id"], supportsAllDrives=True
                     ).execute()
-                    print(f"Deleted: {file['name']}")
+                    # print(f"Deleted: {file['name']}")
                     deleted_count += 1
                 except HttpError as e:
                     errors.append(f"Failed to delete {file['id']}: {str(e)}")
@@ -274,7 +273,7 @@ def delete_all_drive_files(service, dry_run=False):
         # Empty trash (optional)
         if not dry_run:
             service.files().emptyTrash().execute()
-            print("Trash emptied")
+            # print("Trash emptied")
 
     except HttpError as error:
         print(f"Google API error: {error}")
