@@ -61,7 +61,7 @@ def upload_file_to_drive(service, file_path, file_name, folder_id):
 
 
 def upload_large_file_to_drive(
-    service, file_path, file_name, folder_id, progress_bar=None, progress_text=None
+    service, file_path, file_name, folder_id, progress_bar=None
 ):
     from googleapiclient.http import MediaFileUpload
 
@@ -77,15 +77,15 @@ def upload_large_file_to_drive(
         if status:
             progress = status.progress()
             print("running")
-            if progress_bar and progress_text:
-                progress_bar.progress(progress)
-                progress_text.text(f"Upload Progress: {int(progress * 100)}%")
+            if progress_bar:
+                progress_bar.progress(
+                    progress, text=f"Upload Progress: {int(progress * 100)}%"
+                )
             else:
                 print(f"Uploaded {int(status.progress() * 100)}%")
 
-    if progress_bar and progress_text:
-        progress_bar.progress(1.0)
-        progress_text.text("Upload Complete: 100%")
+    if progress_bar:
+        progress_bar.progress(1.0, text="Upload Complete: 100%")
 
     return response.get("id")
 

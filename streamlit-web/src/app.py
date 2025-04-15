@@ -21,7 +21,10 @@ def download_video_UI():
 
     if st.button("Download file"):
         if download_link:
-            download_file(download_link)
+
+            progress_bar = st.progress(0)
+
+            download_file(download_link, progress_bar=progress_bar)
             refresh_file_list()
             st.success(f"File downloaded from {download_link}!")
         else:
@@ -45,13 +48,16 @@ def compress_video_UI(download_file_path):
         else:
             st.error("Please select a file to compress.")
 
+
 def download_compressed_file_UI():
     st.divider()
     st.subheader("Download Compressed File")
 
     # Choose file to download
     list_all_files = st.session_state.list_all_files
-    selected_file = st.selectbox("Select a compressed file to download:", list_all_files)
+    selected_file = st.selectbox(
+        "Select a compressed file to download:", list_all_files
+    )
 
     if selected_file:
         file_path = f"downloaded-files/{selected_file}"
@@ -67,6 +73,7 @@ def download_compressed_file_UI():
         )
     else:
         st.error("Please select a file to download.")
+
 
 def google_drive_authentication_UI(token_file_path):
     st.divider()
@@ -218,7 +225,6 @@ def upload_google_drive_UI(root_folder_id, download_file_path):
                     folder_id = folder_id_input.strip()
 
                 progress_bar = st.progress(0)
-                progress_text = st.empty()
 
                 file_id = upload_large_file_to_drive(
                     service,
@@ -226,7 +232,6 @@ def upload_google_drive_UI(root_folder_id, download_file_path):
                     file_name,
                     folder_id,
                     progress_bar,
-                    progress_text,
                 )
 
                 if file_id:
