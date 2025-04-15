@@ -65,3 +65,12 @@ def download_file(
 
     return str(output_path)
 
+def delete_file(file_path):
+    import os
+
+    try:
+        os.remove(file_path)
+        return True
+    except Exception as e:
+        print(f"Error deleting file: {e}")
+        return False
