@@ -1,4 +1,5 @@
 .idea
+.env
 compressed-video
 raw-video
 log

@@ -73,7 +73,7 @@
     // and it's already deserialized for you.
     function onDataFromPython(event) {
         if (event.data.type !== "streamlit:render") return;
-        url = "https://urban-bassoon-vr6479jj557cpjxg-8000.app.github.dev/download/" + event.data.args.my_input_value;
+        url = event.data.args.my_input_value;
         downloadButton.setAttribute("href", url);
     }
 

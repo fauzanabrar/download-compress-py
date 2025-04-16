@@ -10,3 +10,4 @@ fastapi[standard]
 uvicorn
 requests
 black
+python-dotenv

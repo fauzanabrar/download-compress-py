@@ -1,3 +1,4 @@
+from dotenv import load_dotenv
 import streamlit as st
 import os
 from utils.drive_utils import (
@@ -14,6 +15,8 @@ from components.download_button_api import download_button_api
 # from utils.compression_utils import compress_video
 from utils.file_utils import download_file, delete_file
 
+
+load_dotenv()
 
 def download_video_UI():
     st.title("Video Upload to Google Drive")
@@ -32,7 +35,7 @@ def download_video_UI():
             st.error("Please enter a valid download link.")
 
 
-def compress_video_UI(download_file_path):
+def compress_video_UI(download_file_path, host_api):
     # Compress selected file
     list_all_files = st.session_state.list_all_files
     selected_file = st.selectbox("Select a file to compress:", list_all_files)
@@ -45,7 +48,7 @@ def compress_video_UI(download_file_path):
         st.button("Compress Video", on_click=compress_video, args=(selected_file,))
 
     with col2:
-        download_button_api(my_input_value=selected_file)
+        download_button_api(my_input_value=f"{host_api}/download/{selected_file}")
 
     with col3:
         st.button(
@@ -261,6 +264,9 @@ if __name__ == "__main__":
     IS_SERVICE_ACCOUNT = True
     ROOT_FOLDER_ID = "10514rVBAqv21ry4gvRK-EP2wAxq3cjU6"
 
+    HOST_WEB = os.getenv("HOST_WEB", "http://localhost:8501")
+    HOST_API = os.getenv("HOST_API", "http://localhost:8000")
+
     if not os.path.exists(DOWNLOAD_FILE_PATH):
         os.makedirs(DOWNLOAD_FILE_PATH)
 
@@ -338,7 +344,7 @@ if __name__ == "__main__":
     download_video_UI()
 
     # video compress
-    compress_video_UI(DOWNLOAD_FILE_PATH)
+    compress_video_UI(DOWNLOAD_FILE_PATH, HOST_API)
 
     # google drive authentication
     google_drive_authentication_UI(TOKEN_FILE_PATH)
