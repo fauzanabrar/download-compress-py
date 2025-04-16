@@ -7,7 +7,6 @@ from utils.drive_utils import (
     get_drive_quota,
     delete_all_drive_files,
 )
-from pathlib import Path
 
 # from utils.compression_utils import compress_video
 from utils.file_utils import download_file, delete_file
@@ -43,21 +42,45 @@ def compress_video_UI(download_file_path):
         st.button("Compress Video", on_click=compress_video, args=(selected_file,))
 
     with col2:
-        if st.button("Prepare Download"):
-            # with open(file_path, "rb") as f:
-            #     data = f.read()
-
-            # st.download_button(
-            #     label="Download",
-            #     data=data,
-            #     file_name=selected_file,
-            #     mime="application/octet-stream",
-            # )
-
-            st.markdown(
-                f'<a href="https://urban-bassoon-vr6479jj557cpjxg-8000.app.github.dev/download/{selected_file}" target="_blank">📥 Download File</a>',
-                unsafe_allow_html=True,
-            )
+        st.markdown(
+            f"""
+            <style>
+            .download-button {{
+                display: inline-flex;
+                -webkit-box-align: center;
+                align-items: center;
+                -webkit-box-pack: center;
+                justify-content: center;
+                font-weight: 400;
+                padding: 0.25rem 0.75rem;
+                border-radius: 0.5rem;
+                min-height: 2.5rem;
+                margin: 0px;
+                line-height: 1.6;
+                text-transform: none;
+                font-size: inherit;
+                font-family: inherit;
+                color: white !important;      /* or set your own color */
+                width: auto;
+                cursor: pointer;
+                user-select: none;
+                background-color: rgb(19, 23, 32);
+                border: 1px solid rgba(250, 250, 250, 0.2);
+                text-decoration: none !important;
+            }}
+            .download-button:hover {{
+                border-color: #ff514f;
+                font-color: #ff514f;
+                color: #ff514f !important;
+            }}
+            
+            </style>
+            <a href="https://urban-bassoon-vr6479jj557cpjxg-8000.app.github.dev/download/{selected_file}" 
+                target="_blank" 
+                class="download-button">Download</a>
+            """,
+            unsafe_allow_html=True,
+        )
     with col3:
         st.button(
             "Delete File",
