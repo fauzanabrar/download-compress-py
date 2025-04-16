@@ -19,14 +19,20 @@ app.add_middleware(
 DOWNLOAD_DIR = "downloaded-files"
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
+
 # Endpoint to download files
 @app.get("/download/{file_name}")
 async def download_file(file_name: str):
     safe_filename = os.path.basename(file_name)
     file_path = os.path.join(DOWNLOAD_DIR, safe_filename)
+
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="File not found")
-    return FileResponse(file_path, filename=safe_filename, media_type='application/octet-stream')
+
+    return FileResponse(
+        file_path, filename=safe_filename, media_type="application/octet-stream"
+    )
+
 
 # Endpoint to run a Makefile command
 @app.post("/reweb")
@@ -52,13 +58,17 @@ async def reweb(target: str = "file"):
     """
     try:
         subprocess.Popen(
-            ["make", target],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
+            ["make", target], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
         )
-        return {"status": "success", "output": f"Makefile command '{target}' executed successfully."}
+        return {
+            "status": "success",
+            "output": f"Makefile command '{target}' executed successfully.",
+        }
     except subprocess.CalledProcessError as e:
-        raise HTTPException(status_code=500, detail=f"Makefile command failed: {e.stderr}")
+        raise HTTPException(
+            status_code=500, detail=f"Makefile command failed: {e.stderr}"
+        )
+
 
 # Run the server with host="0.0.0.0" for Codespaces
 if __name__ == "__main__":

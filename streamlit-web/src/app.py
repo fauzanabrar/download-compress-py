@@ -54,16 +54,9 @@ def compress_video_UI(download_file_path):
             #     mime="application/octet-stream",
             # )
 
-            st.html(
-                f"""
-                <a href="http://urban-bassoon-vr6479jj557cpjxg-8000.app.github.dev/download/{selected_file}" target="_blank" download>
-                    <button data-baseweb="button" style="background-color: #4CAF50; color: white; padding: 10px 20px; border: none; cursor: pointer;">Download</button>
-                </a>
-                <script>
-                    const downloadButton = document.querySelector('button[data-baseweb="button"]');
-                    downloadButton.click();
-                </script>
-                """
+            st.markdown(
+                f'<a href="https://urban-bassoon-vr6479jj557cpjxg-8000.app.github.dev/download/{selected_file}" target="_blank">📥 Download File</a>',
+                unsafe_allow_html=True,
             )
     with col3:
         st.button(
