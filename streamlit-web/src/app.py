@@ -44,14 +44,26 @@ def compress_video_UI(download_file_path):
 
     with col2:
         if st.button("Prepare Download"):
-            with open(file_path, "rb") as f:
-                data = f.read()
+            # with open(file_path, "rb") as f:
+            #     data = f.read()
 
-            st.download_button(
-                label="Download",
-                data=data,
-                file_name=selected_file,
-                mime="application/octet-stream",
+            # st.download_button(
+            #     label="Download",
+            #     data=data,
+            #     file_name=selected_file,
+            #     mime="application/octet-stream",
+            # )
+
+            st.html(
+                f"""
+                <a href="http://urban-bassoon-vr6479jj557cpjxg-8000.app.github.dev/download/{selected_file}" target="_blank" download>
+                    <button data-baseweb="button" style="background-color: #4CAF50; color: white; padding: 10px 20px; border: none; cursor: pointer;">Download</button>
+                </a>
+                <script>
+                    const downloadButton = document.querySelector('button[data-baseweb="button"]');
+                    downloadButton.click();
+                </script>
+                """
             )
     with col3:
         st.button(

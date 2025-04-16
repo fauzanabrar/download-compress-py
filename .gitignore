@@ -10,6 +10,7 @@ unzip
 token.json
 service_account.json
 
+node_modules
 __pycache__/
 */__pycache__/
 streamlit-web/downloaded-files
