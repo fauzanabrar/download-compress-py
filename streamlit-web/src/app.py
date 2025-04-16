@@ -12,7 +12,7 @@ from utils.drive_utils import (
 from mycomponent import mycomponent
 from components.download_button_api import download_button_api
 
-# from utils.compression_utils import compress_video
+from utils.compression_utils import compress_video
 from utils.file_utils import download_file, delete_file
 
 
@@ -42,11 +42,18 @@ def compress_video_UI(download_file_path, host_api):
 
     file_path = f"{download_file_path}/{selected_file}"
 
+    compress_progress = st.empty()
+
+    if st.session_state.get("show_compress_progress_bar", False):
+        compress_progress = st.session_state.get("compress_progress", 0)
+        
+
     col1, col2, col3 = st.columns([0.35, 1, 0.25])
 
-    with col1:
-        st.button("Compress Video", on_click=compress_video, args=(selected_file,))
 
+    with col1:
+        st.button("Compress Video",on_click=compress,args=(selected_file, compress_progress), key="compress_video")
+        
     with col2:
         download_button_api(my_input_value=f"{host_api}/download/{selected_file}")
 
@@ -61,6 +68,10 @@ def compress_video_UI(download_file_path, host_api):
     if st.session_state.get("file_alert", False):
         st.success(st.session_state.get("alert_message"))
         update_state("file_alert", False)
+    
+    # if st.session_state.get("show_compress_progress_bar", False):
+    #     compress_progress = st.session_state.get("compress_progress", 0)
+    #     st.session_state.show_compress_progress_bar = True
 
 
 def google_drive_authentication_UI(token_file_path):
@@ -284,10 +295,12 @@ if __name__ == "__main__":
     initialize_state("service", None)
     initialize_state("token_file_path", TOKEN_FILE_PATH)
     initialize_state("token_file_content", None)
+    initialize_state("show_compress_progress_bar", False)
     initialize_state("show_token_content", False)
     initialize_state("show_delete_all_files_button", False)
     initialize_state("file_alert", False)
     initialize_state("alert_message", None)
+    initialize_state("compress_progress", 0)
 
     list_all_files = st.session_state.list_all_files
     service = st.session_state.service
@@ -319,13 +332,32 @@ if __name__ == "__main__":
         return service
 
     # Compress video
-    def compress_video(selected_file):
+    def compress(selected_file, progress_bar=None):
         file_name = f"{os.path.splitext(selected_file)[0]}_compressed{os.path.splitext(selected_file)[1]}"
-        file_path = os.path.join(DOWNLOAD_FILE_PATH, file_name)
 
-        with open(file_path, "wb") as f:
-            # Simulate writing to file
-            f.write(os.urandom(1024))
+        input_file = os.path.join(DOWNLOAD_FILE_PATH, selected_file)
+        output_file = os.path.join(DOWNLOAD_FILE_PATH, file_name)
+
+        video_bitrate = "1000k"
+        video_quality = "31"
+        resolution = "640:480"
+
+
+        if progress_bar:
+            update_state("show_compress_progress_bar", True)
+            update_state("compress_progress", 0)
+            compress_progress = st.progress(0)
+
+        compress_video(
+            input_file,
+            output_file,
+            video_bitrate=video_bitrate,
+            video_quality=video_quality,
+            resolution=resolution,
+            progress_bar=compress_progress if progress_bar else None,
+            
+        )
+
 
         refresh_file_list()
 

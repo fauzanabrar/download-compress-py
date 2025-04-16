@@ -1,5 +1,13 @@
 install:
 	pip install -r streamlit-web/requirements.txt
+	
+	if [ "$(shell uname -s)" = "Linux" ]; then \
+		if [ -f /etc/os-release ] && grep -q "Ubuntu" /etc/os-release; then \
+			sudo apt update && sudo apt upgrade -y; \
+			sudo apt install -y ffmpeg; \
+		fi \
+	fi
+	
 	npm i -g pm2
 
 format:
