@@ -1,0 +1,96 @@
+<html>
+<!-- Set up your HTML here -->
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+        font-family: sans-serif;
+    }
+
+    .download-button {
+        display: inline-flex;
+        -webkit-box-align: center;
+        align-items: center;
+        -webkit-box-pack: center;
+        justify-content: center;
+        font-weight: 400;
+        padding: 0.35rem 0.75rem;
+        border-radius: 0.5rem;
+        height: auto;
+        margin: 0px;
+        line-height: 1.6;
+        text-transform: none;
+        font-size: inherit;
+        color: white !important;
+        /* or set your own color */
+        width: auto;
+        cursor: pointer;
+        user-select: none;
+        background-color: rgb(19, 23, 32);
+        border: 1px solid rgba(250, 250, 250, 0.2);
+        text-decoration: none !important;
+    }
+
+    .download-button:hover {
+        border-color: #ff514f;
+        color: #ff514f !important;
+    }
+</style>
+<a href="" target="_blank" class="download-button">Download</a>
+<script>
+    // ----------------------------------------------------
+    // Just copy/paste these functions as-is:
+
+    function sendMessageToStreamlitClient(type, data) {
+        var outData = Object.assign({
+            isStreamlitMessage: true,
+            type: type,
+        }, data);
+        window.parent.postMessage(outData, "*");
+    }
+
+    function init() {
+        sendMessageToStreamlitClient("streamlit:componentReady", { apiVersion: 1 });
+    }
+
+    function setFrameHeight(height) {
+        sendMessageToStreamlitClient("streamlit:setFrameHeight", { height: height });
+    }
+
+    // The `data` argument can be any JSON-serializable value.
+    function sendDataToPython(data) {
+        sendMessageToStreamlitClient("streamlit:setComponentValue", data);
+    }
+
+    // ----------------------------------------------------
+    // Now modify this part of the code to fit your needs:
+
+    var url = "https://urban-bassoon-vr6479jj557cpjxg-8000.app.github.dev/download/";
+    var downloadButton = document.querySelector(".download-button");
+
+
+    // data is any JSON-serializable value you sent from Python,
+    // and it's already deserialized for you.
+    function onDataFromPython(event) {
+        if (event.data.type !== "streamlit:render") return;
+        url = event.data.args.my_input_value;
+        downloadButton.setAttribute("href", url);
+    }
+
+    // Hook things up!
+    window.addEventListener("message", onDataFromPython);
+    init();
+
+    // Hack to autoset the iframe height.
+    window.addEventListener("load", function () {
+        window.setTimeout(function () {
+            setFrameHeight(document.documentElement.clientHeight)
+        }, 0);
+    });
+
+    // Optionally, if the automatic height computation fails you, give this component a height manually
+    // by commenting out below:
+    //   setFrameHeight(200);
+</script>
+
+</html>

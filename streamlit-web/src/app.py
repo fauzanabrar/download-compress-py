@@ -1,3 +1,4 @@
+from dotenv import load_dotenv
 import streamlit as st
 import os
 from utils.drive_utils import (
@@ -7,10 +8,15 @@ from utils.drive_utils import (
     get_drive_quota,
     delete_all_drive_files,
 )
-from pathlib import Path
 
-# from utils.compression_utils import compress_video
+from mycomponent import mycomponent
+from components.download_button_api import download_button_api
+
+from utils.compression_utils import compress_video
 from utils.file_utils import download_file, delete_file
+
+
+load_dotenv()
 
 
 def download_video_UI():
@@ -30,29 +36,42 @@ def download_video_UI():
             st.error("Please enter a valid download link.")
 
 
-def compress_video_UI(download_file_path):
+def compress_video_UI(download_file_path, host_api):
+    st.divider()
+    st.subheader("Compress Video")
+
+    if st.button("Refresh File List", key="refresh_file_list"):
+        refresh_file_list()
+        st.success("File list refreshed successfully!")
+
     # Compress selected file
     list_all_files = st.session_state.list_all_files
     selected_file = st.selectbox("Select a file to compress:", list_all_files)
 
+    # Select video quality
+    resolution = st.selectbox(
+        "Select video quality:",
+        ["240p", "360p", "480p", "720p", "1080p"],
+        index=2,
+    )
+
     file_path = f"{download_file_path}/{selected_file}"
+
+    compress_progress_bar = st.empty()
 
     col1, col2, col3 = st.columns([0.35, 1, 0.25])
 
     with col1:
-        st.button("Compress Video", on_click=compress_video, args=(selected_file,))
+        st.button(
+            "Compress Video",
+            on_click=compress_file,
+            args=(selected_file, resolution),
+            key="compress_video",
+        )
 
     with col2:
-        if st.button("Prepare Download"):
-            with open(file_path, "rb") as f:
-                data = f.read()
+        download_button_api(my_input_value=f"{host_api}/download/{selected_file}")
 
-            st.download_button(
-                label="Download",
-                data=data,
-                file_name=selected_file,
-                mime="application/octet-stream",
-            )
     with col3:
         st.button(
             "Delete File",
@@ -126,9 +145,8 @@ def upload_google_drive_UI(root_folder_id, download_file_path):
 
     # Choose file to upload from the downloaded file folder
     with col1:
-        if st.button("Refresh File List"):
-            list_all_files = refresh_file_list()
-            st.success("File list refreshed!")
+        if st.button("Refresh File List", key="refresh_file_list_2"):
+            refresh_button()
 
     with col2:
         if st.button("Get Google Drive Quota"):
@@ -184,6 +202,11 @@ def upload_google_drive_UI(root_folder_id, download_file_path):
 
                 # Hide the button after it is clicked
                 update_state("show_delete_all_files_button", False)
+
+    if st.session_state.get("show_list_alert", False):
+        st.success(st.session_state.get("alert_message"))
+        update_state("show_list_alert", False)
+        update_state("show_delete_all_files_button", False)
 
     list_all_files = st.session_state.list_all_files
     selected_file = st.selectbox("Select a video file to upload:", list_all_files)
@@ -267,6 +290,9 @@ if __name__ == "__main__":
     IS_SERVICE_ACCOUNT = True
     ROOT_FOLDER_ID = "10514rVBAqv21ry4gvRK-EP2wAxq3cjU6"
 
+    HOST_WEB = os.getenv("HOST_WEB", "http://localhost:8501")
+    HOST_API = os.getenv("HOST_API", "http://localhost:8000")
+
     if not os.path.exists(DOWNLOAD_FILE_PATH):
         os.makedirs(DOWNLOAD_FILE_PATH)
 
@@ -284,10 +310,14 @@ if __name__ == "__main__":
     initialize_state("service", None)
     initialize_state("token_file_path", TOKEN_FILE_PATH)
     initialize_state("token_file_content", None)
+    initialize_state("resolution", "480p")
+    initialize_state("show_compress_progress_bar", False)
     initialize_state("show_token_content", False)
     initialize_state("show_delete_all_files_button", False)
+    initialize_state("show_list_alert", False)
     initialize_state("file_alert", False)
     initialize_state("alert_message", None)
+    initialize_state("compress_progress", 0)
 
     list_all_files = st.session_state.list_all_files
     service = st.session_state.service
@@ -319,13 +349,22 @@ if __name__ == "__main__":
         return service
 
     # Compress video
-    def compress_video(selected_file):
-        file_name = f"{os.path.splitext(selected_file)[0]}_compressed{os.path.splitext(selected_file)[1]}"
-        file_path = os.path.join(DOWNLOAD_FILE_PATH, file_name)
+    def compress_file(selected_file, resolution, progress_bar=None):
+        file_name = f"{os.path.splitext(selected_file)[0]}_compressed_{resolution}{os.path.splitext(selected_file)[1]}"
 
-        with open(file_path, "wb") as f:
-            # Simulate writing to file
-            f.write(os.urandom(1024))
+        input_file = os.path.join(DOWNLOAD_FILE_PATH, selected_file)
+        output_file = os.path.join(DOWNLOAD_FILE_PATH, file_name)
+
+        if progress_bar:
+            update_state("show_compress_progress_bar", True)
+            update_state("compress_progress", 0)
+
+        compress_video(
+            input_file,
+            output_file,
+            quality=resolution,
+            progress_bar=progress_bar if progress_bar else None,
+        )
 
         refresh_file_list()
 
@@ -339,12 +378,17 @@ if __name__ == "__main__":
         update_state("file_alert", True)
         update_state("alert_message", f"File {selected_file} deleted successfully!")
 
+    def refresh_button():
+        refresh_file_list()
+        update_state("show_list_alert", True)
+        update_state("alert_message", "File list refreshed successfully!")
+
     # UI
     # video download
     download_video_UI()
 
     # video compress
-    compress_video_UI(DOWNLOAD_FILE_PATH)
+    compress_video_UI(DOWNLOAD_FILE_PATH, HOST_API)
 
     # google drive authentication
     google_drive_authentication_UI(TOKEN_FILE_PATH)

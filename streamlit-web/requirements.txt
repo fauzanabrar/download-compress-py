@@ -4,9 +4,11 @@ google-auth-oauthlib
 google-api-python-client
 yt-dlp
 ffmpeg-python
+ffmpeg
 pandas
 fastapi
 fastapi[standard]
 uvicorn
 requests
 black
+python-dotenv

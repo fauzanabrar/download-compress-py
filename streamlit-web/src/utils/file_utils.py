@@ -31,16 +31,17 @@ def new_download(url):
 
 
 # For downloading non-video files like a zip file, use the `requests` library.
-def download_file(
-    url, output_dir="downloaded-files", progress_bar=None, progress_text=None
-):
+def download_file(url, output_dir="downloaded-files", progress_bar=None):
     import requests
     from pathlib import Path
 
     response = requests.get(url, stream=True)
-    response.raise_for_status()  # Raise an error for bad status codes
+    total_size = int(response.headers.get("content-length", 0))
+    downloaded_size = 0
 
-    # Extract the file name from the URL
+    if progress_bar:
+        progress_bar.progress(0, text=f"Starting download...")
+
     file_name = url.split("/")[-1]
     output_path = Path(output_dir) / file_name
 
@@ -48,17 +49,16 @@ def download_file(
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Write the file to the output directory
-    progress_value = 0
-    len_response = len(response.content)
     with open(output_path, "wb") as file:
         for chunk in response.iter_content(chunk_size=8192):
-            progress_value += len(chunk) / len_response
+            downloaded_size += len(chunk)
+            file.write(chunk)
             if progress_bar:
                 progress_bar.progress(
-                    progress_value,
-                    text=f"Downloading {file_name}...  {progress_value:.2%}",
+                    downloaded_size / total_size,
+                    text=f"Downloading... {downloaded_size / total_size:.2%}",
                 )
-            file.write(chunk)
+    response.raise_for_status()  # Raise an error for bad status codes
 
     if progress_bar:
         progress_bar.progress(1.0, text=f"Download complete: {file_name}")
