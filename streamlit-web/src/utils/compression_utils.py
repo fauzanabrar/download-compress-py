@@ -1,31 +1,70 @@
+# choose compress video with options quality 240p 360p 480p 720p 1080p
 def compress_video(
     input_file,
     output_file,
-    video_bitrate="1000k",
-    video_quality="31",
-    resolution="640:480",
+    quality="240p",
     progress_bar=None,
 ):
     import subprocess
     import re
 
+    """Compress video using ffmpeg with specified quality and resolution."""
+
+    resolution = ""
+    video_bitrate = ""
+    video_quality = ""
+
+    # Define the ffmpeg command based on the selected quality
+    if quality == "240p":
+        resolution = "426:240"
+        video_bitrate = "500k"
+        video_quality = "31"
+    elif quality == "360p":
+        resolution = "640:360"
+        video_bitrate = "800k"
+        video_quality = "23"
+    elif quality == "480p":
+        resolution = "854:480"
+        video_bitrate = "1000k"
+        video_quality = "23"
+    elif quality == "720p":
+        resolution = "1280:720"
+        video_bitrate = "2000k"
+        video_quality = "23"
+    elif quality == "1080p":
+        resolution = "1920:1080"
+        video_bitrate = "4000k"
+        video_quality = "23"
+    else:
+        raise ValueError(
+            "Invalid quality option. Choose from 240p, 360p, 480p, 720p, or 1080p."
+        )
+    # Construct the ffmpeg command
     ffmpeg_cmd = [
         "ffmpeg",
         "-i",
         input_file,
-        "-vf",
-        f"scale={resolution}",
-        "-b:v",
-        video_bitrate,
-        "-vcodec",
-        "libx265",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "slow",
         "-crf",
         video_quality,
-        "-preset",
-        "veryfast",
+        "-b:v",
+        video_bitrate,
+        "-vf",
+        f"scale={resolution}",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "128k",
+        "-movflags",
+        "+faststart",
         output_file,
     ]
 
+    # Print the command for debugging
+    # print("Running command:", " ".join(ffmpeg_cmd))
 
     process = subprocess.Popen(
         ffmpeg_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
@@ -48,11 +87,12 @@ def compress_video(
 
                     # Only update the progress bar at defined intervals
                     if current_time - last_update_time >= progress_update_interval:
-                        progress_bar.progress(percent, text=f"{int(percent * 100)}% completed")
+                        progress_bar.progress(
+                            percent, text=f"{int(percent * 100)}% completed"
+                        )
                         last_update_time = current_time
 
         progress_bar.progress(1.0, text="100% completed")
-
 
 
 def get_duration(input_file):
@@ -60,8 +100,18 @@ def get_duration(input_file):
 
     """Get duration of video in seconds."""
     result = subprocess.run(
-        ["ffprobe", "-v", "error", "-show_entries", "format=duration",
-         "-of", "default=noprint_wrappers=1:nokey=1", input_file],
-        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "default=noprint_wrappers=1:nokey=1",
+            input_file,
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
     )
     return float(result.stdout.strip())

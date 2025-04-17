@@ -4,6 +4,8 @@ from fastapi.middleware.cors import CORSMiddleware
 import os
 import subprocess
 import uvicorn
+from fastapi import Request
+import aiohttp
 
 app = FastAPI()
 
@@ -33,6 +35,41 @@ async def download_file(file_name: str):
         file_path, filename=safe_filename, media_type="application/octet-stream"
     )
 
+
+# Endpoint to download a file from a URL and save it locally
+@app.post("/fetch-file")
+async def fetch_file(url: str, file_name: str = None):
+    """
+    Downloads a file from a given URL and saves it to the local directory.
+    \n\n
+    Args:\n
+        \turl (str): The URL of the file to download.
+    \n\n
+    Returns:\n
+        \tdict: A dictionary containing the status of the operation and the saved file name.
+    \n\n
+    Raises:\n
+        \tHTTPException: If the URL is invalid or the download fails, an HTTP 400 or 500 error is raised.
+    """
+    try:
+        if not url:
+            raise HTTPException(status_code=400, detail="URL is required")
+
+        file_name = os.path.basename(url) if file_name is None else file_name
+        file_path = os.path.join(DOWNLOAD_DIR, file_name)
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                if response.status != 200:
+                    raise HTTPException(
+                        status_code=500, detail="Failed to download the file"
+                    )
+                with open(file_path, "wb") as f:
+                    f.write(await response.read())
+
+        return {"status": "success", "file_name": file_name}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Endpoint to run a Makefile command
 @app.post("/reweb")

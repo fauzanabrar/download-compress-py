@@ -18,6 +18,7 @@ from utils.file_utils import download_file, delete_file
 
 load_dotenv()
 
+
 def download_video_UI():
     st.title("Video Upload to Google Drive")
 
@@ -36,9 +37,23 @@ def download_video_UI():
 
 
 def compress_video_UI(download_file_path, host_api):
+    st.divider()
+    st.subheader("Compress Video")
+
+    if st.button("Refresh File List", key="refresh_file_list"):
+        refresh_file_list()
+        st.success("File list refreshed successfully!")
+
     # Compress selected file
     list_all_files = st.session_state.list_all_files
     selected_file = st.selectbox("Select a file to compress:", list_all_files)
+
+    # Select video quality
+    resolution = st.selectbox(
+        "Select video quality:",
+        ["240p", "360p", "480p", "720p", "1080p"],
+        index=2,
+    )
 
     file_path = f"{download_file_path}/{selected_file}"
 
@@ -46,10 +61,14 @@ def compress_video_UI(download_file_path, host_api):
 
     col1, col2, col3 = st.columns([0.35, 1, 0.25])
 
-
     with col1:
-        st.button("Compress Video",on_click=compress_file,args=(selected_file, ), key="compress_video")
-        
+        st.button(
+            "Compress Video",
+            on_click=compress_file,
+            args=(selected_file, resolution),
+            key="compress_video",
+        )
+
     with col2:
         download_button_api(my_input_value=f"{host_api}/download/{selected_file}")
 
@@ -64,7 +83,6 @@ def compress_video_UI(download_file_path, host_api):
     if st.session_state.get("file_alert", False):
         st.success(st.session_state.get("alert_message"))
         update_state("file_alert", False)
-    
 
 
 def google_drive_authentication_UI(token_file_path):
@@ -127,7 +145,7 @@ def upload_google_drive_UI(root_folder_id, download_file_path):
 
     # Choose file to upload from the downloaded file folder
     with col1:
-        if st.button("Refresh File List"):
+        if st.button("Refresh File List", key="refresh_file_list_2"):
             refresh_button()
 
     with col2:
@@ -292,6 +310,7 @@ if __name__ == "__main__":
     initialize_state("service", None)
     initialize_state("token_file_path", TOKEN_FILE_PATH)
     initialize_state("token_file_content", None)
+    initialize_state("resolution", "480p")
     initialize_state("show_compress_progress_bar", False)
     initialize_state("show_token_content", False)
     initialize_state("show_delete_all_files_button", False)
@@ -330,16 +349,11 @@ if __name__ == "__main__":
         return service
 
     # Compress video
-    def compress_file(selected_file, progress_bar=None):
-        file_name = f"{os.path.splitext(selected_file)[0]}_compressed{os.path.splitext(selected_file)[1]}"
+    def compress_file(selected_file, resolution, progress_bar=None):
+        file_name = f"{os.path.splitext(selected_file)[0]}_compressed_{resolution}{os.path.splitext(selected_file)[1]}"
 
         input_file = os.path.join(DOWNLOAD_FILE_PATH, selected_file)
         output_file = os.path.join(DOWNLOAD_FILE_PATH, file_name)
-
-        video_bitrate = "1000k"
-        video_quality = "31"
-        resolution = "640:480"
-
 
         if progress_bar:
             update_state("show_compress_progress_bar", True)
@@ -348,12 +362,9 @@ if __name__ == "__main__":
         compress_video(
             input_file,
             output_file,
-            video_bitrate=video_bitrate,
-            video_quality=video_quality,
-            resolution=resolution,
+            quality=resolution,
             progress_bar=progress_bar if progress_bar else None,
         )
-
 
         refresh_file_list()
 
